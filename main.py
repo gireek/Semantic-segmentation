@@ -102,13 +102,11 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     """
     # TODO: Implement function
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
-    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=correct_label))
-    reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    print(reg_losses)
-    total_reg_loss = tf.losses.get_regularization_loss() #tf.add_n(reg_losses)
-    total_loss = cross_entropy_loss + total_reg_loss
-    train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
-    return logits, train_op, total_loss
+    correct_label = tf.reshape(correct_label, (-1, num_classes))
+    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=correct_label, logits=logits))
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+    train_op = optimizer.minimize(cross_entropy_loss)
+    return logits, train_op, cross_entropy_loss
 tests.test_optimize(optimize)
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
@@ -134,7 +132,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
         j = 0
         for image, label in get_batches_fn(batch_size):
             _, loss = sess.run([train_op, cross_entropy_loss],
-                               feed_dict={input_image: image, correct_label: label, keep_prob: 0.4,learning_rate: 0.0002})            
+                               feed_dict={input_image: image, correct_label: label, keep_prob: 0.4,learning_rate: 0.001})            
             print("EPOCH {} ... BATCH {} ... LOSS: = {:.3f}".format(i + 1, j + 1, loss))
             j += 1
     print()
@@ -153,7 +151,7 @@ def run():
     with tf.Session() as sess:
         # Path to vgg model
         epochs = 20
-        batch_size = 10
+        batch_size = 4
         correct_label = tf.placeholder(tf.float32, [None, image_shape[0],image_shape[1],num_classes], name="correct_label")
         learning_rate = tf.placeholder(tf.float32, name="learning_rate")
         vgg_path = os.path.join(data_dir, 'vgg')
